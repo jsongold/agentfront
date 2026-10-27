@@ -15,6 +15,7 @@ from app.adapters.registry import adapter_map
 from app.config import get_settings, llm_key_status, uses_openai_compatible_base
 from app.db import get_session
 from app.domain.catalog import BusinessCatalog
+from app.domain.completeness import compute_completeness, load_required_fields
 from app.domain.validation import SchemaValidationError
 from app.jobs import enqueue_generation
 from app.models import (
@@ -32,7 +33,7 @@ from app.models import (
     utcnow,
 )
 from app.serialize import jsonable
-from app.services.persistence import open_catalog
+from app.services.persistence import load_catalog, open_catalog
 from app.services.review import latest_run, publish_business, save_review
 
 def require_admin(request: Request) -> None:
@@ -99,6 +100,7 @@ def _business_dict(session: Session, row: Business) -> dict[str, Any]:
         "price_range": row.price_range,
         "trust": row.trust,
         "extension": row.extension,
+        "completeness": row.completeness,
         "source_urls": row.source_urls,
         "source_description": row.source_description,
         "last_error": row.last_error,
@@ -258,6 +260,23 @@ def get_business(business_id: str, session: Session = Depends(get_session)) -> J
     if row is None:
         raise HTTPException(status_code=404, detail="事業者が見つかりません")
     return JSONResponse(jsonable(_business_dict(session, row)))
+
+
+@router.get("/businesses/{business_id}/completeness")
+def get_completeness(business_id: str, session: Session = Depends(get_session)) -> JSONResponse:
+    row = session.get(Business, _uuid(business_id))
+    if row is None:
+        raise HTTPException(status_code=404, detail="事業者が見つかりません")
+    report = compute_completeness(load_catalog(session, row, include_adapter_config=False))
+    row.completeness = report
+    row.updated_at = utcnow()
+    session.commit()
+    return JSONResponse(jsonable(report))
+
+
+@router.get("/required-fields")
+def required_fields() -> JSONResponse:
+    return JSONResponse(jsonable(load_required_fields()))
 
 
 @router.delete("/businesses/{business_id}")

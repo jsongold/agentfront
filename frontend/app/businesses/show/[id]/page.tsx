@@ -1,5 +1,6 @@
 "use client";
 
+import { CompletenessAlert } from "@/components/completeness-alert";
 import { api } from "@/lib/api";
 import { statusOf } from "@/lib/labels";
 import type { BusinessRow } from "@/lib/types";
@@ -81,6 +82,7 @@ export default function BusinessShowPage() {
       ) : null}
       {actionError ? <Alert type="error" showIcon message={actionError} /> : null}
       {row?.last_error ? <Alert type="error" showIcon message="直近のエラー" description={row.last_error} /> : null}
+      <CompletenessAlert report={row?.completeness} />
 
       <Card loading={query.isLoading && !row}>
         <Descriptions column={{ xs: 1, sm: 1, md: 2 }} bordered size="small">

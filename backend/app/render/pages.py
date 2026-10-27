@@ -16,6 +16,13 @@ TEMPLATES = Path(__file__).resolve().parents[1] / "templates"
 env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
 
 
+def _pretty_json(data: Any) -> str:
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+env.filters["prettyjson"] = _pretty_json
+
+
 def dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
 

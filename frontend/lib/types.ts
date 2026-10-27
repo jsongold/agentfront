@@ -86,6 +86,23 @@ export type Catalog = {
   vertical_key: string | null;
 };
 
+export type CompletenessField = {
+  key: string;
+  title: string;
+  paths: string[];
+};
+
+export type CompletenessReport = {
+  profile: string;
+  title: string;
+  score: number;
+  total: number;
+  filled: number;
+  missing: CompletenessField[];
+  empty: CompletenessField[];
+  computed_at: string;
+};
+
 export type RunBrief = {
   id: string;
   status: string;
@@ -113,6 +130,7 @@ export type BusinessRow = {
   offering_count: number;
   work_count: number;
   conversion_point_count: number;
+  completeness: CompletenessReport | null;
   public_url: string | null;
   markdown_url: string | null;
   created_at: string;

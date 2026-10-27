@@ -40,6 +40,7 @@ class Business(SQLModel, table=True):
     price_range: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     trust: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
     extension: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
+    completeness: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     images: list[Any] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     source_urls: list[Any] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     source_description: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))

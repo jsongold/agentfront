@@ -1,6 +1,7 @@
 "use client";
 
 import { CatalogEditor } from "@/components/catalog-editor";
+import { CompletenessAlert } from "@/components/completeness-alert";
 import { JsonEditor } from "@/components/json-editor";
 import { api } from "@/lib/api";
 import { statusOf } from "@/lib/labels";
@@ -156,6 +157,7 @@ export default function ReviewPage() {
       {notice ? <Alert type="success" showIcon message={notice} /> : null}
       {review?.run?.error ? <Alert type="error" showIcon message="生成エラー" description={review.run.error} /> : null}
       {review?.business.last_error ? <Alert type="warning" showIcon message={review.business.last_error} /> : null}
+      <CompletenessAlert report={review?.business.completeness} />
       {busy ? <Alert type="info" showIcon message="取得と生成が進んでいます。完了すると右欄にカタログが出ます。" /> : null}
 
       {loading && !review ? (

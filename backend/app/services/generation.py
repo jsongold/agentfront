@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import uuid
@@ -12,11 +13,17 @@ from app.config import get_settings
 from app.crawl.url_crawl import CrawlResult, fetch_url
 from app.db import session_scope
 from app.domain.catalog import BusinessCatalog
-from app.domain.validation import SchemaValidationError
+from app.domain.completeness import (
+    compute_completeness,
+    ensure_required_properties,
+    required_fields_text,
+    resolve_profile,
+)
+from app.domain.validation import SchemaValidationError, tighten_schema
 from app.llm.client import LLMNotConfigured, SchemaProposal, generation_llm_session, render_prompt, structured_call
 from app.models import Business, CrawlDocument, GenerationRun, utcnow
 from app.services.persistence import prepare_catalog, seal_catalog
-from app.services.schemas import find_schema, latest_schemas, save_schema_version
+from app.services.schemas import canonical, find_schema, latest_schemas, save_schema_version
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +117,8 @@ def _execute(business_id: uuid.UUID) -> None:
             business.status = "generating"
         session.commit()
 
-        proposal = _propose(session, packed, business.source_description or "")
-        schema_row = _schema_from_proposal(session, proposal)
+        proposal = _propose(session, packed, business.source_description or "", _profile_for(business))
+        schema_row = _schema_from_proposal(session, proposal, _profile_for(business, proposal.schema_key))
         run = session.get(GenerationRun, run_id)
         assert run is not None
         run.schema_proposal = proposal.model_dump(mode="json")
@@ -119,7 +126,13 @@ def _execute(business_id: uuid.UUID) -> None:
         run.step = "extract"
         session.commit()
 
-        catalog, warning = _extract(packed, business.source_description or "", schema_row.json_schema)
+        profile = _profile_for(business, schema_row.key)
+        catalog, warning = _extract(
+            packed,
+            business.source_description or "",
+            schema_row.json_schema,
+            profile=profile,
+        )
         catalog.source_urls = list(business.source_urls or [])
         catalog.source_description = business.source_description or ""
         catalog.vertical_key = schema_row.key
@@ -131,10 +144,12 @@ def _execute(business_id: uuid.UUID) -> None:
                 images.extend(result.images)
             catalog.images = images[:6]
         catalog = prepare_catalog(catalog)
+        completeness = compute_completeness(catalog)
 
         run = session.get(GenerationRun, run_id)
         business = session.get(Business, business_id)
         assert run is not None and business is not None
+        business.completeness = completeness
         run.extracted = seal_catalog(catalog)
         run.status = "review"
         run.step = "done"
@@ -175,7 +190,17 @@ def _pack(description: str, results: list[CrawlResult]) -> str:
     return "\n\n".join(parts)[:16_000]
 
 
-def _propose(session, packed: str, description: str) -> SchemaProposal:
+def _profile_for(business: Business, vertical_key: str | None = None) -> dict:
+    return resolve_profile(
+        {
+            "vertical_key": vertical_key or business.vertical_key,
+            "schema_org_type": business.schema_org_type,
+            "offerings": [],
+        }
+    )
+
+
+def _propose(session, packed: str, description: str, profile: dict) -> SchemaProposal:
     existing = [
         {
             "key": row.key,
@@ -191,6 +216,7 @@ def _propose(session, packed: str, description: str) -> SchemaProposal:
         existing=json.dumps(existing, ensure_ascii=False)[:12_000],
         description=description,
         sources=packed,
+        required_fields=required_fields_text(profile),
     )
     proposal = structured_call(
         SchemaProposal,
@@ -202,12 +228,19 @@ def _propose(session, packed: str, description: str) -> SchemaProposal:
     return proposal
 
 
-def _schema_from_proposal(session, proposal: SchemaProposal):
+def _schema_from_proposal(session, proposal: SchemaProposal, profile: dict):
+    document = ensure_required_properties(
+        proposal.document or {"type": "object", "additionalProperties": False, "properties": {}},
+        profile,
+    )
+    proposal.document = document
     if proposal.action == "reuse":
         found = find_schema(session, proposal.schema_key)
         if found is not None:
-            return found
-    document = proposal.document or {"type": "object", "additionalProperties": False, "properties": {}}
+            if canonical(tighten_schema(copy.deepcopy(document))) == canonical(found.json_schema):
+                return found
+            proposal.title = proposal.title or found.title
+            proposal.description = proposal.description or found.description
     return save_schema_version(
         session,
         key=proposal.schema_key,
@@ -217,13 +250,21 @@ def _schema_from_proposal(session, proposal: SchemaProposal):
     )
 
 
-def _extract(packed: str, description: str, schema: dict, retry_note: str = "") -> tuple[BusinessCatalog, str | None]:
+def _extract(
+    packed: str,
+    description: str,
+    schema: dict,
+    retry_note: str = "",
+    *,
+    profile: dict | None = None,
+) -> tuple[BusinessCatalog, str | None]:
     user = render_prompt(
         "extract_catalog.md",
         schema=json.dumps(schema, ensure_ascii=False)[:8_000],
         description=description,
         sources=packed,
         retry_note=retry_note,
+        required_fields=required_fields_text(profile),
     )
     catalog = structured_call(
         BusinessCatalog,
@@ -249,4 +290,5 @@ def _extract(packed: str, description: str, schema: dict, retry_note: str = "") 
             retry_note="The previous output failed schema validation:\n"
             + "\n".join(exc.errors)
             + "\nReturn corrected extension objects.",
+            profile=profile,
         )

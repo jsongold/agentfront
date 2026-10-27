@@ -35,6 +35,15 @@ def test_agents_md_describes_business_and_query_surfaces():
     assert "MUST confirm" in text
 
 
+def test_agents_md_renders_input_schema_as_readable_utf8_json():
+    catalog = _prepared(aoba_catalog(BASE))
+    text = render_agents_md(catalog, BASE)
+
+    assert "建設地" in text
+    assert "\\u5efa" not in text
+    assert '\n  "type": "object"' in text
+
+
 def test_site_agents_md_links_each_business_agents_md():
     catalog = _prepared(aoba_catalog(BASE))
     text = render_site_agents_md([view_business(catalog, BASE)], BASE)

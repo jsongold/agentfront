@@ -18,6 +18,7 @@ from app.domain.catalog import (
     Work,
     assign_slugs,
 )
+from app.domain.completeness import compute_completeness
 from app.domain.conversion_templates import default_input_schema
 from app.domain.validation import SchemaValidationError, check_schema_document, tighten_schema, validate_catalog_extensions
 from app.models import Business as BusinessRow
@@ -175,6 +176,8 @@ def apply_catalog(
 ) -> None:
     """Replace the live rows for a business. Caller commits."""
     catalog = prepare_catalog(catalog)
+    if schema_row is not None:
+        catalog.vertical_key = schema_row.key
     document = schema_row.json_schema if schema_row else None
     validate_catalog_extensions(document, catalog)
     conflict = session.exec(
@@ -199,6 +202,7 @@ def apply_catalog(
     business.schema_org_type = catalog.schema_org_type or "ProfessionalService"
     business.vertical_schema_id = schema_row.id if schema_row else None
     business.vertical_key = schema_row.key if schema_row else catalog.vertical_key
+    business.completeness = compute_completeness(catalog)
     business.updated_at = utcnow()
 
     for row in _points(session, business.id):
