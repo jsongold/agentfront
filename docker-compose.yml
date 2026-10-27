@@ -1,0 +1,93 @@
+name: agentfront
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalog
+    ports:
+      - "54329:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    # Docker Hub no longer serves minio/minio without a login. This Bitnami
+    # build speaks the same S3 API the app's MinIO client expects.
+    image: bitnamilegacy/minio:2025.7.23
+    environment:
+      MINIO_ROOT_USER: catalog
+      MINIO_ROOT_PASSWORD: catalogsecret
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    volumes:
+      - miniodata:/bitnami/minio/data
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8765:8765"
+    environment: &app-env
+      DATABASE_URL: postgresql+psycopg://catalog:catalog@postgres:5432/catalog
+      PUBLIC_BASE_URL: http://localhost:8765
+      INTERNAL_BASE_URL: http://backend:8765
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: catalog
+      MINIO_SECRET_KEY: catalogsecret
+      MINIO_BUCKET: catalog-media
+      MINIO_SECURE: "false"
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: catalog@localhost
+      CREDENTIALS_KEY: 7mJHRuAJVVlLkUino67I2-wRhTFJdNBzbKKctA5HWgo=
+      LLM_API_BASE: ${LLM_API_BASE:-https://opencode.ai/zen/go/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-v4.1-flash}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      CRAWL_BACKEND: ${CRAWL_BACKEND:-auto}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: ["worker"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3410:3410"
+    environment:
+      API_INTERNAL_URL: http://backend:8765
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      PORT: "3410"
+      HOSTNAME: "0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  miniodata:

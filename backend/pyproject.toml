@@ -1,0 +1,61 @@
+[project]
+name = "agentfront"
+version = "0.1.0"
+description = "Agent-facing business catalog with MCP, generated from one central model."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "sqlmodel>=0.0.22",
+  "sqlalchemy>=2.0.36",
+  "alembic>=1.14",
+  "psycopg[binary]>=3.2",
+  "psycopg-pool>=3.2",
+  "pydantic>=2.10",
+  "pydantic-settings>=2.6",
+  "litellm>=1.55",
+  "instructor>=1.7",
+  "httpx>=0.28",
+  "tenacity>=9.0",
+  "trafilatura>=2.0",
+  "extruct>=0.18",
+  "lxml>=5.3",
+  "minio>=7.2",
+  "procrastinate>=3.0",
+  "mcp>=1.2",
+  "jinja2>=3.1",
+  "jsonschema>=4.23",
+  "cryptography>=44.0",
+  "pluggy>=1.5",
+  "python-slugify>=8.0",
+  "python-multipart>=0.0.18",
+]
+
+[project.optional-dependencies]
+crawl4ai = ["crawl4ai>=0.6"]
+dev = ["pytest>=8.3"]
+
+[project.scripts]
+agentfront-bootstrap = "app.bootstrap:main"
+
+[project.entry-points."agentfront.adapters"]
+internal = "app.adapters.internal:plugin"
+email = "app.adapters.email:plugin"
+webhook = "app.adapters.webhook:plugin"
+
+[project.entry-points."agentfront.ingestion"]
+url_crawl = "app.crawl.url_crawl:plugin"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["prompts/*.md", "templates/*.html", "fixtures/*.html", "fixtures/assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

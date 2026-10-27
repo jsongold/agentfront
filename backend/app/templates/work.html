@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% set title = work.title %}
+{% set description = work.description %}
+{% set markdown_url = work.md_url %}
+{% set jsonld = work.jsonld %}
+{% block body %}
+<p class="note"><a href="{{ page.html_url }}">{{ page.name }}</a> の実績</p>
+<h1>{{ work.title }}</h1>
+<p>{{ work.description }}</p>
+<table>
+  {% if work.year %}<tr><th>年</th><td>{{ work.year }}</td></tr>{% endif %}
+  {% if work.client %}<tr><th>依頼者</th><td>{{ work.client }}</td></tr>{% endif %}
+  {% if work.location %}<tr><th>場所</th><td>{{ work.location }}</td></tr>{% endif %}
+  <tr><th>schema.org</th><td>{{ work.schema_org_type }}</td></tr>
+</table>
+{% if work.extension %}<h2>属性</h2><pre>{{ work.extension | tojson(indent=2) }}</pre>{% endif %}
+<p><a href="{{ work.md_url }}">Markdown版</a></p>
+{% endblock %}
