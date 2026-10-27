@@ -37,6 +37,16 @@ UCP = {
     }
 }
 
+PUBLIC_ADDRESS = "93.184.216.34"
+
+
+@pytest.fixture(autouse=True)
+def _stub_dns(monkeypatch):
+    monkeypatch.setattr(
+        "app.diagnostics.service.resolve_host",
+        lambda host: [PUBLIC_ADDRESS],
+    )
+
 
 def _client(handler) -> httpx.Client:
     return httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=True)
@@ -118,6 +128,27 @@ def test_non_http_scheme_is_rejected():
 def test_private_ip_is_rejected_by_default():
     with pytest.raises(BlockedAddressError):
         diagnose_url("http://127.0.0.1/")
+
+
+def test_hostname_resolving_to_private_ip_is_rejected(monkeypatch):
+    monkeypatch.setattr(
+        "app.diagnostics.service.resolve_host",
+        lambda host: ["10.0.0.5"],
+    )
+
+    with pytest.raises(BlockedAddressError):
+        diagnose_url("https://internal.example/")
+
+
+def test_redirect_to_private_ip_is_rejected():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/":
+            return httpx.Response(302, headers={"location": "http://127.0.0.1/"})
+        return httpx.Response(200, text=AOBAA_HTML, headers={"content-type": "text/html"})
+
+    with _client(handler) as client:
+        with pytest.raises(BlockedAddressError):
+            diagnose_url("https://public.example/", client=client)
 
 
 def test_private_ip_can_be_allowed_for_tests():

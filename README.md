@@ -40,6 +40,7 @@ docker compose up --build
 | `LLM_MODEL` | `deepseek-v4.1-flash` | Go のモデルID。代替は `grok-4.7` や `glm-5.3-flash`。ほかに `grok-4.6`、`glm-5.3`、`deepseek-v4-pro` があります |
 | `ADMIN_TOKEN` | 空 | 空なら管理APIは無認証。入れると `/api` は `X-Admin-Token` が必要。フロントのプロキシが同じ値を付けます |
 | `CRAWL_BACKEND` | `auto` | `auto` / `trafilatura` / `crawl4ai` |
+| `DIAGNOSTICS_ALLOW_PRIVATE` | `false` | `true` にすると、エージェント可視性診断でローカル・プライベートなアドレスも対象にします。開発やテスト用です |
 | `CREDENTIALS_KEY` | 開発用の固定鍵 | アダプタ資格情報の Fernet 鍵。本番では必ず別の鍵にする |
 | `PUBLIC_BASE_URL` | `http://localhost:8765` | 公開URLとJSON-LDの起点。トンネル利用時は外向けのURLに合わせる |
 | `INTERNAL_BASE_URL` | `http://backend:8765` | ワーカーが自分のフィクスチャを取りに行くときの起点 |
@@ -88,15 +89,46 @@ OPENAI_API_KEY=sk-...
 - 各事業者の `.../b/{slug}.md`
 - 各事業者の `.../b/{slug}/agents.md` と `.../b/{slug}/.well-known/ucp`
 
+## エージェント向けファイル
+
+`agents.md` は、サイト全体と事業者ごとの両方で公開します。サイト全体の `agents.md` は各事業者へのリンク集で、事業者ごとのファイルは問い合わせ方法、提供内容、コンバージョン地点、入力スキーマをまとめます。`/.well-known/ucp` も同じ構成で、UCP の `version` と `services` を返します。
+
+| 対象 | agents.md | UCPプロファイル |
+| --- | --- | --- |
+| サイト全体 | http://localhost:8765/agents.md | http://localhost:8765/.well-known/ucp |
+| 事業者ごと | http://localhost:8765/b/{slug}/agents.md | http://localhost:8765/b/{slug}/.well-known/ucp |
+
+MCP の `get_business` も、事業者ごとの `agents_md_url` と `ucp_url` を返します。
+
+## 必須項目と充足率
+
+業種ごとの買い手向け必須項目は `backend/app/domain/required_fields.yaml` のプロファイルで定義します。`services` と `goods` を基本に、`verticals` で業種を追加・継承でき、コードを変えずに反映されます。生成・保存・公開のたびにカタログとの充足率を計算し、管理画面のレビューと事業者詳細に未設定・空欄の警告を出します。
+
+| API | 内容 |
+| --- | --- |
+| `GET /api/required-fields` | プロファイル定義一式 |
+| `GET /api/businesses/{id}/completeness` | 対象事業者の充足率レポート（再計算して保存） |
+
+## エージェント可視性診断
+
+任意の公開URLを、AIエージェントから見た可視性で採点します。robots.txt でのAIクローラ許可、JSON-LD、本文の読み取りやすさ、title と description、`llms.txt`、`agents.md`、UCPプロファイルを確認し、スコアと改善案を返します。JavaScriptは実行しません。
+
+- 管理画面: http://localhost:3410/diagnostics の「エージェント可視性診断」
+- API: `POST /api/diagnostics` に `{"url": "https://example.com/"}` を送ります。履歴は `GET /api/diagnostics`
+- MCP: `diagnose_agent_visibility`（`url`、任意の `agent_name`）
+- 設定: `backend/app/diagnostics/config.yaml`（対象クローラ、確認するファイル、配点、タイムアウトなど）
+- `DIAGNOSTICS_ALLOW_PRIVATE=true` のときだけ、ローカル・プライベートなアドレスも診断できます。既定ではホスト名の解決結果がプライベートなら拒否し、リダイレクト先や robots.txt / agents.md などの追加取得も同じように検査します
+
 ## MCPクライアント
 
-ツールは5つです。意味検索はありません。条件の解釈はエージェント側です。
+ツールは6つです。意味検索はありません。条件の解釈はエージェント側です。
 
 - `search_businesses` … 名前、タグ、エリア、価格、種別
 - `get_business` … 事業者の全項目（業種拡張を含む）
 - `get_offering` … 提供内容と、それに使えるコンバージョン
 - `list_conversion_points` … 入力スキーマ
 - `submit_conversion` … スキーマ検証のあと、設定したアダプタへ送る
+- `diagnose_agent_visibility` … URLのエージェント可視性を採点する
 
 ### MCP Inspector
 

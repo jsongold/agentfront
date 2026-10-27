@@ -11,6 +11,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from lxml import html as lhtml
 
+from app.diagnostics.errors import BlockedAddressError
 from app.diagnostics.report import (
     AgentFileInfo,
     BotAccess,
@@ -90,6 +91,8 @@ def fetch(
                 truncated=truncated,
                 error=None,
             )
+    except BlockedAddressError:
+        raise
     except Exception as exc:  # noqa: BLE001
         return FetchResult(
             url=url,

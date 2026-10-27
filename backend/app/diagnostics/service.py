@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import ipaddress
+import socket
 from urllib.parse import urlparse
 
 import httpx
 
 from app.config import get_settings
+from app.diagnostics.errors import BlockedAddressError, InvalidTargetError
 from app.diagnostics.extract import (
     FetchResult,
     extract_meta,
@@ -31,12 +33,13 @@ from app.diagnostics.report import (
 from app.diagnostics.spec import CheckSpec, DiagnosticsConfig, load_config
 
 
-class InvalidTargetError(ValueError):
-    """The target is not an absolute http(s) URL."""
+def resolve_host(host: str) -> list[str]:
+    """Return every address the system resolves for ``host``.
 
-
-class BlockedAddressError(ValueError):
-    """The target resolves to a local or private literal address."""
+    Kept at module level so tests can replace it (or ``socket.getaddrinfo``)
+    without making real DNS queries.
+    """
+    return [str(info[4][0]) for info in socket.getaddrinfo(host, None)]
 
 
 def diagnose_url(
@@ -55,6 +58,7 @@ def diagnose_url(
     own_client = client is None
     if own_client:
         client = httpx.Client(follow_redirects=True)
+    _install_request_guard(client, allow_private=allowed)
     try:
         page = fetch(
             client,
@@ -96,19 +100,53 @@ def validate_url(url: str, *, allow_private: bool) -> str:
     host = parsed.hostname
     if not host:
         raise InvalidTargetError("URLにホスト名がありません")
-    if not allow_private and _is_private_host(host):
-        raise BlockedAddressError("ローカルまたはプライベートなアドレスは診断できません")
+    if not allow_private:
+        _check_public_host(host)
     return text
 
 
-def _is_private_host(host: str) -> bool:
+def _install_request_guard(client: httpx.Client, *, allow_private: bool) -> None:
+    """Check every request, including redirect hops and secondary fetches."""
+
+    def guard(request: httpx.Request) -> None:
+        validate_url(str(request.url), allow_private=allow_private)
+
+    guard._agentfront_ssrf_guard = True  # type: ignore[attr-defined]
+    hooks = [
+        hook
+        for hook in client.event_hooks.get("request", [])
+        if not getattr(hook, "_agentfront_ssrf_guard", False)
+    ]
+    hooks.append(guard)
+    client.event_hooks["request"] = hooks
+
+
+def _check_public_host(host: str) -> None:
     lowered = host.strip().strip("[]").lower().rstrip(".")
     if lowered == "localhost" or lowered.endswith(".localhost"):
-        return True
+        raise BlockedAddressError("ローカルまたはプライベートなアドレスは診断できません")
     try:
-        address = ipaddress.ip_address(lowered)
+        literal = ipaddress.ip_address(lowered)
     except ValueError:
-        return False
+        try:
+            addresses = resolve_host(lowered)
+        except OSError as exc:
+            raise BlockedAddressError("ホスト名を解決できません") from exc
+        if not addresses:
+            raise BlockedAddressError("ホスト名を解決できません")
+        for raw in addresses:
+            try:
+                address = ipaddress.ip_address(raw.split("%", 1)[0])
+            except ValueError:
+                continue
+            if _is_blocked_address(address):
+                raise BlockedAddressError("ローカルまたはプライベートなアドレスは診断できません")
+        return
+    if _is_blocked_address(literal):
+        raise BlockedAddressError("ローカルまたはプライベートなアドレスは診断できません")
+
+
+def _is_blocked_address(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return any(
         (
             address.is_private,
