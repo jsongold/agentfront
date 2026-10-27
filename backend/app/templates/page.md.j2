@@ -1,0 +1,108 @@
+{% if offering %}
+# {{ offering.name }}
+
+事業者: [{{ page.name }}]({{ page.html_url }})
+
+{{ offering.description }}
+
+- 種別: {{ offering.kind }}
+- schema.org: {{ offering.schema_org_type }}
+{% if offering.tags %}- タグ: {{ offering.tags | join(", ") }}
+{% endif %}
+{% if offering.price_range %}- 料金: {{ offering.price_range.min_amount }}–{{ offering.price_range.max_amount }} {{ offering.price_range.currency }} {{ offering.price_range.unit or "" }}
+{% endif %}
+
+## 拡張属性
+
+```json
+{{ offering.extension | tojson }}
+```
+{% elif work %}
+# {{ work.title }}
+
+事業者: [{{ page.name }}]({{ page.html_url }})
+
+{{ work.description }}
+
+{% if work.year %}- 年: {{ work.year }}
+{% endif %}
+{% if work.client %}- 依頼者: {{ work.client }}
+{% endif %}
+{% if work.location %}- 場所: {{ work.location }}
+{% endif %}
+- schema.org: {{ work.schema_org_type }}
+{% else %}
+# {{ page.name }}
+
+> {{ page.summary }}
+
+{{ page.description }}
+
+- HTML: {{ page.html_url }}
+- 事業者: {{ page.seller.name }}
+{% if page.seller.address %}- 所在地: {{ page.seller.address }}
+{% endif %}
+{% if page.seller.email %}- メール: {{ page.seller.email }}
+{% endif %}
+{% if page.seller.phone %}- 電話: {{ page.seller.phone }}
+{% endif %}
+{% if page.service_area %}- 対応エリア: {{ page.service_area | join(", ") }}
+{% endif %}
+{% if page.tags %}- タグ: {{ page.tags | join(", ") }}
+{% endif %}
+{% if page.price_range %}- 料金の目安: {{ page.price_range.min_amount }}–{{ page.price_range.max_amount }} {{ page.price_range.currency }} / {{ page.price_range.unit or "案件" }}
+{% endif %}
+{% if page.trust.years_in_business %}- 業歴: {{ page.trust.years_in_business }}年
+{% endif %}
+{% if page.trust.licenses %}- 許認可: {{ page.trust.licenses | join(" / ") }}
+{% endif %}
+
+## 業種ごとの属性
+
+```json
+{{ page.extension_json }}
+```
+
+## 提供内容
+
+{% for item in page.offerings %}
+### {{ item.name }}
+
+{{ item.description }}
+
+- URL: {{ item.html_url }}
+- Markdown: {{ item.md_url }}
+- 種別: {{ item.kind }}
+{% if item.price_range %}- 料金: {{ item.price_range.min_amount }}–{{ item.price_range.max_amount }} {{ item.price_range.currency }}
+{% endif %}
+{% endfor %}
+
+## 実績
+
+{% for item in page.works %}
+### {{ item.title }}
+
+{{ item.description }}
+
+- URL: {{ item.html_url }}
+{% if item.year %}- 年: {{ item.year }}
+{% endif %}
+{% if item.client %}- 依頼者: {{ item.client }}
+{% endif %}
+{% endfor %}
+
+## コンバージョン
+
+{% for point in page.conversion_points %}
+### {{ point.name }}（{{ point.type }}）
+
+{{ point.description }}
+
+- 受付: {{ point.action_url }}
+- 入力スキーマ:
+
+```json
+{{ point.input_schema | tojson }}
+```
+{% endfor %}
+{% endif %}

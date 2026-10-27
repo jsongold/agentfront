@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% set title = offering.name %}
+{% set description = offering.description %}
+{% set markdown_url = offering.md_url %}
+{% set jsonld = offering.jsonld %}
+{% block body %}
+<p class="note"><a href="{{ page.html_url }}">{{ page.name }}</a> の提供内容</p>
+<h1>{{ offering.name }}</h1>
+<p>{{ offering.description }}</p>
+<table>
+  <tr><th>種別</th><td>{{ offering.kind }}</td></tr>
+  <tr><th>schema.org</th><td>{{ offering.schema_org_type }}</td></tr>
+  {% if offering.tags %}<tr><th>タグ</th><td>{{ offering.tags | join("、") }}</td></tr>{% endif %}
+  {% if offering.area %}<tr><th>エリア</th><td>{{ offering.area | join("、") }}</td></tr>{% endif %}
+  {% if offering.price_range and (offering.price_range.min_amount or offering.price_range.max_amount) %}
+  <tr><th>料金の目安</th><td>{{ offering.price_range.min_amount or "—" }}–{{ offering.price_range.max_amount or "—" }} {{ offering.price_range.currency }}</td></tr>
+  {% endif %}
+</table>
+{% if offering.extension %}<h2>属性</h2><pre>{{ offering.extension | tojson(indent=2) }}</pre>{% endif %}
+<p><a href="{{ offering.md_url }}">Markdown版</a></p>
+{% endblock %}

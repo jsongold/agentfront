@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{% set title = page.name %}
+{% set description = page.summary %}
+{% set markdown_url = page.md_url %}
+{% set jsonld = page.jsonld %}
+{% block body %}
+<p class="note">AIエージェント向けの事業者カタログです。人間向けの宣伝ページではありません。</p>
+<h1>{{ page.name }}</h1>
+<p>{{ page.summary }}</p>
+<p>{{ page.description }}</p>
+<h2>事業者</h2>
+<table>
+  <tr><th>名称</th><td>{{ page.seller.name }}</td></tr>
+  {% if page.seller.legal_name %}<tr><th>正式名称</th><td>{{ page.seller.legal_name }}</td></tr>{% endif %}
+  {% if page.seller.address %}<tr><th>所在地</th><td>{{ page.seller.address }}</td></tr>{% endif %}
+  {% if page.seller.email %}<tr><th>メール</th><td>{{ page.seller.email }}</td></tr>{% endif %}
+  {% if page.seller.phone %}<tr><th>電話</th><td>{{ page.seller.phone }}</td></tr>{% endif %}
+  {% if page.service_area %}<tr><th>対応エリア</th><td>{{ page.service_area | join("、") }}</td></tr>{% endif %}
+  {% if page.tags %}<tr><th>タグ</th><td>{{ page.tags | join("、") }}</td></tr>{% endif %}
+  {% if page.price_range and (page.price_range.min_amount or page.price_range.max_amount) %}
+  <tr><th>料金の目安</th><td>{{ page.price_range.min_amount or "—" }}–{{ page.price_range.max_amount or "—" }} {{ page.price_range.currency }}{% if page.price_range.unit %} / {{ page.price_range.unit }}{% endif %}</td></tr>
+  {% endif %}
+</table>
+{% if page.trust.licenses or page.trust.years_in_business or page.trust.awards %}
+<h2>信頼情報</h2>
+<ul>
+  {% if page.trust.years_in_business %}<li>業歴 {{ page.trust.years_in_business }} 年</li>{% endif %}
+  {% for item in page.trust.licenses %}<li>{{ item }}</li>{% endfor %}
+  {% for item in page.trust.certifications %}<li>{{ item }}</li>{% endfor %}
+  {% for item in page.trust.awards %}<li>{{ item }}</li>{% endfor %}
+  {% if page.trust.insurance %}<li>{{ page.trust.insurance }}</li>{% endif %}
+</ul>
+{% endif %}
+{% if page.extension %}
+<h2>業種ごとの属性</h2>
+<pre>{{ page.extension_json }}</pre>
+{% endif %}
+<h2>提供内容</h2>
+{% for offering in page.offerings %}
+<article>
+  <h3><a href="{{ offering.html_url }}">{{ offering.name }}</a></h3>
+  <p>{{ offering.description }}</p>
+  <p class="meta">{{ offering.kind }}{% if offering.tags %} · {{ offering.tags | join("、") }}{% endif %}</p>
+</article>
+{% endfor %}
+<h2>実績</h2>
+{% for work in page.works %}
+<article>
+  <h3><a href="{{ work.html_url }}">{{ work.title }}</a></h3>
+  <p>{{ work.description }}</p>
+  <p class="meta">{% if work.year %}{{ work.year }}年{% endif %}{% if work.client %} · {{ work.client }}{% endif %}{% if work.location %} · {{ work.location }}{% endif %}</p>
+</article>
+{% endfor %}
+<h2>コンバージョン</h2>
+<ul>
+  {% for point in page.conversion_points %}
+  <li>
+    <strong>{{ point.name }}</strong>（{{ point.type }}）
+    <div>{{ point.description }}</div>
+    <div><a href="{{ point.action_url }}">{{ point.action_url }}</a></div>
+  </li>
+  {% endfor %}
+</ul>
+<p><a href="{{ page.md_url }}">Markdown版</a> · <a href="{{ page.feed_url }}">JSON</a></p>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}エージェント向けカタログ{% endblock %}
+{% block body %}
+<p class="note">このページは、AIエージェントが事業者を比較し、相談や見積などのコンバージョンまで進めるための目録です。</p>
+<h1>掲載中の事業者</h1>
+{% if not businesses %}
+<p>公開中の事業者はまだありません。</p>
+{% endif %}
+{% for business in businesses %}
+<article>
+  <h2><a href="{{ business.html_url }}">{{ business.name }}</a></h2>
+  <p>{{ business.summary }}</p>
+  <p class="meta">
+    {% if business.service_area %}対応: {{ business.service_area | join("、") }}{% endif %}
+    {% if business.tags %} · {{ business.tags | join(" / ") }}{% endif %}
+  </p>
+  <p><a href="{{ business.md_url }}">Markdown</a></p>
+</article>
+{% endfor %}
+{% endblock %}
