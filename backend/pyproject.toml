@@ -29,6 +29,7 @@ dependencies = [
   "pluggy>=1.5",
   "python-slugify>=8.0",
   "python-multipart>=0.0.18",
+  "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -54,7 +55,7 @@ build-backend = "setuptools.build_meta"
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["prompts/*.md", "templates/*.html", "fixtures/*.html", "fixtures/assets/*"]
+app = ["prompts/*.md", "templates/*.html", "templates/*.j2", "fixtures/*.html", "fixtures/assets/*", "domain/*.yaml", "diagnostics/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

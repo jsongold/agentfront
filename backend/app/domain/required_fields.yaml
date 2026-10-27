@@ -1,0 +1,159 @@
+# Buyer-decision fields per industry. Edit this file to add an industry; no code change needed.
+default: services
+
+profiles:
+  services:
+    title: 無形サービス
+    match:
+      schema_org_types:
+        - ProfessionalService
+        - HomeAndConstructionBusiness
+        - LocalBusiness
+        - Service
+        - Organization
+      vertical_keys_contains:
+        - architect
+        - design
+        - construction
+        - video
+        - film
+        - production
+        - consult
+        - service
+      offering_kinds:
+        - service
+        - creative_work
+    fields:
+      - key: price_estimate_basis
+        title: 価格帯・見積の算定根拠
+        description: 価格帯と、面積・尺・工程など何に基づいて見積もるか。
+        paths:
+          - price_range
+          - offerings[].price_range
+          - extension.price_estimate_basis
+        schema:
+          type: string
+          title: 価格帯・見積の算定根拠
+          description: 価格帯と見積の算定根拠。
+      - key: lead_time
+        title: 納期・工期
+        description: 標準的な納期や工期、スケジュールの目安。
+        paths:
+          - extension.lead_time
+          - offerings[].extension.typical_duration
+          - offerings[].extension.duration
+        schema:
+          type: string
+          title: 納期・工期
+          description: 標準的な納期や工期。
+      - key: service_area
+        title: 対応エリア
+        description: 訪問・施工・撮影などで対応できる地域。
+        paths:
+          - service_area
+          - offerings[].area
+        schema:
+          type: array
+          items:
+            type: string
+          title: 対応エリア
+          description: 対応できる地域。
+      - key: contract_terms
+        title: 契約・キャンセル条件
+        description: 契約形態、支払条件、キャンセルや変更の条件。
+        paths:
+          - extension.contract_terms
+        schema:
+          type: string
+          title: 契約・キャンセル条件
+          description: 契約形態、支払条件、キャンセル条件。
+      - key: portfolio
+        title: 実績・ポートフォリオ
+        description: 公開できる実績、作品、認定、受賞。
+        paths:
+          - works
+          - works[].title
+          - trust.certifications
+          - trust.awards
+        schema:
+          type: array
+          items:
+            type: string
+          title: 実績・ポートフォリオ
+          description: 公開できる実績や作品。
+
+  goods:
+    title: 物販・商品
+    match:
+      schema_org_types:
+        - Product
+        - ItemList
+      vertical_keys_contains:
+        - goods
+        - product
+        - retail
+        - shop
+        - commerce
+      offering_kinds:
+        - product
+    fields:
+      - key: price
+        title: 価格
+        description: 販売価格と通貨、単位。
+        paths:
+          - price_range
+          - offerings[].price_range
+        schema:
+          type: string
+          title: 価格
+          description: 販売価格。
+      - key: stock
+        title: 在庫
+        description: 在庫の有無や入荷時期。
+        paths:
+          - extension.stock
+          - extension.stock_status
+          - offerings[].extension.stock
+          - offerings[].extension.stock_status
+        schema:
+          type: string
+          title: 在庫
+          description: 在庫状況や入荷時期。
+      - key: shipping_cost
+        title: 送料
+        description: 送料、配送方法、対象地域。
+        paths:
+          - extension.shipping_cost
+          - offerings[].extension.shipping_cost
+        schema:
+          type: string
+          title: 送料
+          description: 送料や配送条件。
+      - key: return_policy
+        title: 返品条件
+        description: 返品・交換の可否と条件。
+        paths:
+          - extension.return_policy
+          - offerings[].extension.return_policy
+        schema:
+          type: string
+          title: 返品条件
+          description: 返品・交換の条件。
+
+verticals:
+  architecture:
+    extends: services
+    title: 建築・建設
+    fields:
+      - key: structure
+        title: 構造・工法
+        description: 主要な構造や工法。
+        schema_property: structure_types
+        paths:
+          - extension.structure_types
+        schema:
+          type: array
+          items:
+            type: string
+          title: 構造・工法
+          description: 主要な構造や工法。

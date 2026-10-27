@@ -14,7 +14,9 @@ from sqlmodel import Session, select
 from app.adapters.registry import adapter_map
 from app.config import get_settings, llm_key_status, uses_openai_compatible_base
 from app.db import get_session
+from app.diagnostics.service import diagnose_url
 from app.domain.catalog import BusinessCatalog
+from app.domain.completeness import compute_completeness, load_required_fields
 from app.domain.validation import SchemaValidationError
 from app.jobs import enqueue_generation
 from app.models import (
@@ -23,6 +25,7 @@ from app.models import (
     ConversionPoint,
     CrawlDocument,
     Delivery,
+    DiagnosticReport,
     GenerationRun,
     McpCallLog,
     Offering,
@@ -32,7 +35,7 @@ from app.models import (
     utcnow,
 )
 from app.serialize import jsonable
-from app.services.persistence import open_catalog
+from app.services.persistence import load_catalog, open_catalog
 from app.services.review import latest_run, publish_business, save_review
 
 def require_admin(request: Request) -> None:
@@ -99,6 +102,7 @@ def _business_dict(session: Session, row: Business) -> dict[str, Any]:
         "price_range": row.price_range,
         "trust": row.trust,
         "extension": row.extension,
+        "completeness": row.completeness,
         "source_urls": row.source_urls,
         "source_description": row.source_description,
         "last_error": row.last_error,
@@ -135,6 +139,10 @@ class ReviewBody(BaseModel):
 class AdapterBody(BaseModel):
     key: str
     config: dict[str, Any] = Field(default_factory=dict)
+
+
+class DiagnosticBody(BaseModel):
+    url: str
 
 
 class PointBody(BaseModel):
@@ -194,6 +202,48 @@ def adapters() -> list[dict[str, Any]]:
         {"key": adapter.key, "title": adapter.title, "config_schema": adapter.config_schema()}
         for adapter in adapter_map().values()
     ]
+
+
+@router.post("/diagnostics")
+def run_diagnostic(body: DiagnosticBody, session: Session = Depends(get_session)) -> JSONResponse:
+    try:
+        report = diagnose_url(body.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    row = DiagnosticReport(
+        url=str(report["url"]),
+        score=int(report["score"]),
+        grade=str(report["grade"]),
+        report=report,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    data = dict(report)
+    data["id"] = row.id
+    data["created_at"] = row.created_at
+    return JSONResponse(jsonable(data))
+
+
+@router.get("/diagnostics")
+def list_diagnostics(
+    session: Session = Depends(get_session),
+    _start: int = 0,
+    _end: int = 20,
+) -> JSONResponse:
+    rows = list(session.exec(select(DiagnosticReport).order_by(DiagnosticReport.created_at.desc())).all())
+    start, end = _page(_start, _end)
+    items = [
+        {
+            "id": row.id,
+            "url": row.url,
+            "score": row.score,
+            "grade": row.grade,
+            "created_at": row.created_at,
+        }
+        for row in rows[start:end]
+    ]
+    return _listed(items, len(rows))
 
 
 @router.get("/businesses")
@@ -258,6 +308,23 @@ def get_business(business_id: str, session: Session = Depends(get_session)) -> J
     if row is None:
         raise HTTPException(status_code=404, detail="事業者が見つかりません")
     return JSONResponse(jsonable(_business_dict(session, row)))
+
+
+@router.get("/businesses/{business_id}/completeness")
+def get_completeness(business_id: str, session: Session = Depends(get_session)) -> JSONResponse:
+    row = session.get(Business, _uuid(business_id))
+    if row is None:
+        raise HTTPException(status_code=404, detail="事業者が見つかりません")
+    report = compute_completeness(load_catalog(session, row, include_adapter_config=False))
+    row.completeness = report
+    row.updated_at = utcnow()
+    session.commit()
+    return JSONResponse(jsonable(report))
+
+
+@router.get("/required-fields")
+def required_fields() -> JSONResponse:
+    return JSONResponse(jsonable(load_required_fields()))
 
 
 @router.delete("/businesses/{business_id}")

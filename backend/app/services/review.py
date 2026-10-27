@@ -7,6 +7,7 @@ import uuid
 from sqlmodel import Session, select
 
 from app.domain.catalog import BusinessCatalog
+from app.domain.completeness import compute_completeness
 from app.domain.validation import SchemaValidationError
 from app.models import Business, GenerationRun, VerticalSchema, utcnow
 from app.services.persistence import apply_catalog, open_catalog, prepare_catalog, seal_catalog
@@ -48,11 +49,14 @@ def save_review(
         catalog.vertical_key = schema_row.key
     elif run.vertical_schema_id:
         schema_row = session.get(VerticalSchema, run.vertical_schema_id)
+    if schema_row is not None:
+        catalog.vertical_key = schema_row.key
     catalog = prepare_catalog(catalog)
     document = schema_row.json_schema if schema_row is not None else None
     from app.domain.validation import validate_catalog_extensions
 
     validate_catalog_extensions(document, catalog)
+    business.completeness = compute_completeness(catalog)
     run.extracted = seal_catalog(catalog)
     run.status = "review"
     run.step = "edit"

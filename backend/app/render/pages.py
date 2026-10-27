@@ -10,19 +10,31 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.domain.catalog import BusinessCatalog
 from app.render.jsonld import business_jsonld, offering_jsonld, work_jsonld
+from app.render.ucp import conversion_label, conversion_target
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates"
 env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
+
+
+def _pretty_json(data: Any) -> str:
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+env.filters["prettyjson"] = _pretty_json
 
 
 def dumps(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
 
 
-def _action_url(base: str, slug: str, point: dict[str, Any]) -> str:
-    if point.get("type") == "external_link" and point.get("external_url"):
-        return point["external_url"]
-    return f"{base}/b/{slug}/convert/{point['key']}"
+def _action_target(base: str, slug: str, point: dict[str, Any]) -> tuple[str, str]:
+    return conversion_target(
+        base,
+        slug,
+        conversion_type=point.get("type", ""),
+        key=point["key"],
+        external_url=point.get("external_url"),
+    )
 
 
 def view_business(catalog: BusinessCatalog, base: str) -> dict[str, Any]:
@@ -30,6 +42,8 @@ def view_business(catalog: BusinessCatalog, base: str) -> dict[str, Any]:
     data["html_url"] = f"{base}/b/{catalog.slug}"
     data["md_url"] = f"{base}/b/{catalog.slug}.md"
     data["feed_url"] = f"{base}/b/{catalog.slug}/feed.json"
+    data["agents_md_url"] = f"{base}/b/{catalog.slug}/agents.md"
+    data["ucp_url"] = f"{base}/b/{catalog.slug}/.well-known/ucp"
     for offering in data["offerings"]:
         offering["html_url"] = f"{base}/b/{catalog.slug}/o/{offering['slug']}"
         offering["md_url"] = offering["html_url"] + ".md"
@@ -37,7 +51,7 @@ def view_business(catalog: BusinessCatalog, base: str) -> dict[str, Any]:
         work["html_url"] = f"{base}/b/{catalog.slug}/w/{work['slug']}"
         work["md_url"] = work["html_url"] + ".md"
     for point in data["conversion_points"]:
-        point["action_url"] = _action_url(base, catalog.slug, point)
+        point["action_url"], point["action_method"] = _action_target(base, catalog.slug, point)
     data["extension_json"] = dumps(catalog.extension)
     data["jsonld"] = dumps(business_jsonld(catalog, base))
     return data
@@ -84,6 +98,18 @@ def render_markdown(catalog: BusinessCatalog, base: str, *, offering_slug: str |
         if work is None:
             return None
     return env.get_template("page.md.j2").render(page=page, offering=offering, work=work, base=base)
+
+
+def render_agents_md(catalog: BusinessCatalog, base: str) -> str:
+    return env.get_template("agents.md.j2").render(
+        page=view_business(catalog, base),
+        base=base,
+        conversion_label=conversion_label,
+    )
+
+
+def render_site_agents_md(cards: list[dict[str, Any]], base: str) -> str:
+    return env.get_template("agents_site.md.j2").render(businesses=cards, base=base)
 
 
 def render_llms(cards: list[dict[str, Any]], base: str) -> str:

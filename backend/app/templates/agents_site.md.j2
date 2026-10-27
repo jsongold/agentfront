@@ -1,0 +1,28 @@
+# agentfront — instructions for AI agents
+
+> A published catalog of businesses that AI agents can compare and query. There is no vector search; filter with the MCP tool `search_businesses`.
+
+- Base URL: {{ base }}
+- Agent instructions: {{ base }}/agents.md
+- Business catalog: {{ base }}/llms.txt
+- JSON feed: {{ base }}/feed.json
+- Sitemap: {{ base }}/sitemap.xml
+- UCP profile: {{ base }}/.well-known/ucp
+- MCP endpoint (Streamable HTTP): {{ base }}/mcp
+
+## Published businesses
+
+{% for business in businesses %}
+- [{{ business.name }}]({{ business.agents_md_url }}): {{ business.summary }}
+  - HTML: {{ business.html_url }}
+  - Markdown: {{ business.md_url }}
+  - UCP profile: {{ business.ucp_url }}
+  {% if business.service_area %}- Service area: {{ business.service_area | join(", ") }}
+  {% endif %}
+  {% if business.tags %}- Tags: {{ business.tags | join(", ") }}
+  {% endif %}
+{% endfor %}
+
+## Human authorization
+
+Any commitment — purchase, contract, booking, or sending personal data — requires the human buyer's explicit authorization. The agent MUST confirm the details with the human and obtain approval before submitting a conversion, placing an order, or entering a binding agreement.

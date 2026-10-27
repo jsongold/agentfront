@@ -40,6 +40,7 @@ class Business(SQLModel, table=True):
     price_range: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     trust: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
     extension: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
+    completeness: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     images: list[Any] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     source_urls: list[Any] = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     source_description: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
@@ -296,6 +297,20 @@ class PageFetchLog(SQLModel, table=True):
     user_agent: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
     agent_class: str = Field(default="unknown", index=True, max_length=80)
     status_code: int = Field(default=200)
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+
+class DiagnosticReport(SQLModel, table=True):
+    __tablename__ = "diagnostic_reports"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    url: str = Field(sa_column=Column(Text, nullable=False))
+    score: int = Field(default=0)
+    grade: str = Field(default="E", max_length=4)
+    report: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),

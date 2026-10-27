@@ -15,6 +15,7 @@ from app.db import get_session
 from app.domain.validation import SchemaValidationError
 from app.models import Business, ConversionPoint
 from app.render.pages import (
+    render_agents_md,
     render_business,
     render_feed,
     render_index,
@@ -22,10 +23,12 @@ from app.render.pages import (
     render_markdown,
     render_offering,
     render_robots,
+    render_site_agents_md,
     render_sitemap,
     render_work,
     view_business,
 )
+from app.render.ucp import build_platform_profile, build_ucp_profile
 from app.services.conversions import ConversionNotFound, submit_conversion
 from app.services.persistence import load_catalog
 
@@ -60,6 +63,8 @@ def _cards(session: Session) -> tuple[list, list[dict]]:
                 "tags": list(catalog.tags),
                 "html_url": view["html_url"],
                 "md_url": view["md_url"],
+                "agents_md_url": view["agents_md_url"],
+                "ucp_url": view["ucp_url"],
                 "slug": catalog.slug,
             }
         )
@@ -85,6 +90,17 @@ def llms_txt(session: Session = Depends(get_session)) -> PlainTextResponse:
     return PlainTextResponse(render_llms(cards, _base()), media_type="text/plain; charset=utf-8")
 
 
+@router.get("/agents.md", response_class=PlainTextResponse)
+def agents_md(session: Session = Depends(get_session)) -> PlainTextResponse:
+    _catalogs, cards = _cards(session)
+    return PlainTextResponse(render_site_agents_md(cards, _base()), media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/.well-known/ucp")
+def well_known_ucp() -> JSONResponse:
+    return JSONResponse(build_platform_profile(_base()))
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse)
 def robots() -> PlainTextResponse:
     return PlainTextResponse(render_robots(_base()), media_type="text/plain; charset=utf-8")
@@ -94,10 +110,12 @@ def robots() -> PlainTextResponse:
 def sitemap(session: Session = Depends(get_session)) -> Response:
     catalogs, _ignored = _cards(session)
     base = _base()
-    urls = [base + "/", base + "/llms.txt", base + "/feed.json"]
+    urls = [base + "/", base + "/llms.txt", base + "/agents.md", base + "/.well-known/ucp", base + "/feed.json"]
     for catalog in catalogs:
         urls.append(f"{base}/b/{catalog.slug}")
         urls.append(f"{base}/b/{catalog.slug}.md")
+        urls.append(f"{base}/b/{catalog.slug}/agents.md")
+        urls.append(f"{base}/b/{catalog.slug}/.well-known/ucp")
         for offering in catalog.offerings:
             urls.append(f"{base}/b/{catalog.slug}/o/{offering.slug}")
         for work in catalog.works:
@@ -115,6 +133,18 @@ def feed(session: Session = Depends(get_session)) -> JSONResponse:
 def business_feed(slug: str, session: Session = Depends(get_session)) -> JSONResponse:
     _row, catalog = _one(session, slug)
     return JSONResponse(render_feed([catalog], _base()))
+
+
+@router.get("/b/{slug}/agents.md", response_class=PlainTextResponse)
+def business_agents_md(slug: str, session: Session = Depends(get_session)) -> PlainTextResponse:
+    _row, catalog = _one(session, slug)
+    return PlainTextResponse(render_agents_md(catalog, _base()), media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/b/{slug}/.well-known/ucp")
+def business_ucp(slug: str, session: Session = Depends(get_session)) -> JSONResponse:
+    _row, catalog = _one(session, slug)
+    return JSONResponse(build_ucp_profile(catalog, _base()))
 
 
 @router.get("/b/{slug}/o/{offering_slug}")

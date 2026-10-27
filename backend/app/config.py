@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     llm_model: str = DEFAULT_LLM_MODEL
     # auto | crawl4ai | trafilatura. auto uses Crawl4AI when the extra is installed.
     crawl_backend: str = "auto"
+    diagnostics_allow_private: bool = False
 
     @property
     def psycopg_conninfo(self) -> str:

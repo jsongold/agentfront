@@ -18,6 +18,11 @@ Rules for document:
 - offering-specific fields go under $defs.offering (object schema), not on the business object
 - schema_key is lowercase ascii with underscores
 
+Required buyer-decision fields for this trade:
+{{ required_fields }}
+
+Add the fields whose only storage is extension as properties on the document (or under $defs.offering when the paths mention offerings). Do not duplicate fields the core catalog already carries.
+
 Existing schemas (latest version of each key):
 {{ existing }}
 

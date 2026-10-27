@@ -4,7 +4,7 @@ import { Refine } from "@refinedev/core";
 import { RefineThemes, ThemedLayout, ThemedTitle, useNotificationProvider } from "@refinedev/antd";
 import routerProvider from "@refinedev/nextjs-router";
 import dataProvider from "@refinedev/simple-rest";
-import { AimOutlined, LineChartOutlined, MessageOutlined, ShopOutlined } from "@ant-design/icons";
+import { AimOutlined, LineChartOutlined, MessageOutlined, SafetyCertificateOutlined, ShopOutlined } from "@ant-design/icons";
 import { App as AntdApp, ConfigProvider } from "antd";
 import jaJP from "antd/locale/ja_JP";
 import axios from "axios";
@@ -48,6 +48,11 @@ function Shell({ children }: { children: React.ReactNode }) {
           name: "analytics",
           list: "/analytics",
           meta: { label: "計測", icon: <LineChartOutlined /> },
+        },
+        {
+          name: "diagnostics",
+          list: "/diagnostics",
+          meta: { label: "エージェント可視性診断", icon: <SafetyCertificateOutlined /> },
         },
       ]}
       options={{ syncWithLocation: true, warnWhenUnsavedChanges: false }}

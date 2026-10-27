@@ -15,6 +15,11 @@ booking must require desired_datetime as a string with format date-time.
 external_link must set external_url and may use an input schema with no required fields.
 purchase records intent only; there is no payment.
 
+Required buyer-decision fields for this trade:
+{{ required_fields }}
+
+Fill these from the sources when they are stated. Leave a field empty rather than inventing a value. Core fields go on the catalog; extension-only fields go in extension (or offering.extension when the path mentions offerings).
+
 extension must validate against this JSON Schema:
 {{ schema }}
 

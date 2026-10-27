@@ -1,0 +1,90 @@
+{% macro price(price) -%}
+{%- if price and (price.min_amount is not none or price.max_amount is not none) -%}
+{{ price.min_amount if price.min_amount is not none else "—" }}–{{ price.max_amount if price.max_amount is not none else "—" }} {{ price.currency or "JPY" }}{% if price.unit %} / {{ price.unit }}{% endif %}{% if price.note %} ({{ price.note }}){% endif %}
+{%- endif -%}
+{%- endmacro %}
+# {{ page.name }} — instructions for AI agents
+
+> {{ page.summary }}
+
+{{ page.description }}
+
+## Business
+
+- Name: {{ page.name }}
+{% if page.seller.legal_name and page.seller.legal_name != page.name %}- Legal name: {{ page.seller.legal_name }}
+{% endif %}- Business slug: `{{ page.slug }}`
+- Service area: {% if page.service_area %}{{ page.service_area | join(", ") }}{% else %}Not specified{% endif %}
+{% if page.price_range %}- Price range: {{ price(page.price_range) }}
+{% endif %}{% if page.tags %}- Tags: {{ page.tags | join(", ") }}
+{% endif %}{% if page.seller.url %}- Website: {{ page.seller.url }}
+{% endif %}{% if page.seller.address %}- Address: {{ page.seller.address }}
+{% endif %}
+
+## What this business offers
+
+{% for offering in page.offerings %}
+### {{ offering.name }}
+
+{{ offering.description }}
+
+- Kind: {{ offering.kind }}
+{% if offering.price_range %}- Price / estimate basis: {{ price(offering.price_range) }}
+{% endif %}- HTML: {{ offering.html_url }}
+- Markdown: {{ offering.md_url }}
+
+{% else %}
+No offerings are published.
+{% endfor %}
+
+## Works and track record
+
+- Published works: {{ page.works | length }}
+{% for work in page.works %}
+- [{{ work.title }}]({{ work.md_url }}){% if work.year %} ({{ work.year }}){% endif %}: {{ work.description }}
+{% else %}
+- No works are published.
+{% endfor %}
+
+## How to query this business
+
+- This file: {{ page.agents_md_url }}
+- HTML page: {{ page.html_url }}
+- Markdown: {{ page.md_url }}
+- JSON feed: {{ page.feed_url }}
+- JSON-LD: embedded in the HTML page as `application/ld+json`
+- UCP profile: {{ page.ucp_url }}
+- MCP endpoint (Streamable HTTP): {{ base }}/mcp
+
+MCP tools:
+
+- `search_businesses` — filter published businesses by attributes. Example: `{"q": "{{ page.name }}"}`
+- `get_business` — full typed catalog. Example: `{"slug": "{{ page.slug }}"}`
+- `get_offering` — one offering and its conversion points. Example: `{"business_slug": "{{ page.slug }}", "offering_slug": "{% if page.offerings %}{{ page.offerings[0].slug }}{% else %}<offering-slug>{% endif %}"}`
+- `list_conversion_points` — input JSON Schema for each conversion point. Example: `{"business_slug": "{{ page.slug }}"}`
+- `submit_conversion` — submit after validating the payload. Example: `{"conversion_point_id": "<id from list_conversion_points>", "payload": {}}`
+
+## Available conversion points
+
+{% for point in page.conversion_points %}
+### {{ point.name }}
+
+- Key: `{{ point.key }}`
+- Type: {{ point.type }} ({{ conversion_label(point.type) }})
+- How to reach: `{{ point.action_method }} {{ point.action_url }}`
+- MCP: call `list_conversion_points` with `{"business_slug": "{{ page.slug }}"}` to find the `conversion_point_id` for `{{ point.key }}`, then call `submit_conversion` with that id and a `payload`.
+- Required input fields: {% set required = point.input_schema.get("required", []) %}{% if required %}{{ required | join(", ") }}{% else %}none{% endif %}
+
+Input JSON Schema:
+
+```json
+{{ point.input_schema | prettyjson }}
+```
+
+{% else %}
+No conversion points are published.
+{% endfor %}
+
+## Human authorization
+
+Any commitment — purchase, contract, booking, or sending personal data — requires the human buyer's explicit authorization. The agent MUST confirm the details with the human and obtain approval before submitting a conversion, placing an order, or entering a binding agreement.
