@@ -231,4 +231,94 @@ export type MetaInfo = {
   mailpit_url: string;
 };
 
+export type DiagnosticCheck = {
+  key: string;
+  label: string;
+  passed: boolean;
+  weight: number;
+  detail: string;
+};
+
+export type DiagnosticFetchInfo = {
+  ok: boolean;
+  status: number | null;
+  final_url: string;
+  content_type: string;
+  bytes: number;
+  truncated: boolean;
+  error: string | null;
+};
+
+export type DiagnosticMeta = {
+  title: string;
+  description: string;
+  canonical: string;
+  lang: string;
+};
+
+export type DiagnosticStructuredData = {
+  count: number;
+  types: string[];
+  business_types: string[];
+  has_business_entity: boolean;
+  syntax_counts: Record<string, number>;
+};
+
+export type DiagnosticText = {
+  characters: number;
+  words: number;
+  ratio: number;
+  js_shell: boolean;
+  warning: string | null;
+};
+
+export type DiagnosticBotAccess = {
+  name: string;
+  allowed: boolean;
+  detail: string;
+};
+
+export type DiagnosticRobots = {
+  url: string;
+  status: number | null;
+  error: string | null;
+  bots: DiagnosticBotAccess[];
+  disallowed_bots: string[];
+};
+
+export type DiagnosticAgentFile = {
+  key: string;
+  label: string;
+  path: string;
+  url: string;
+  status: number | null;
+  present: boolean;
+  detail: string;
+};
+
+export type DiagnosticReport = {
+  id?: string;
+  url: string;
+  final_url: string;
+  score: number;
+  grade: string;
+  checks: DiagnosticCheck[];
+  recommendations: string[];
+  fetch: DiagnosticFetchInfo;
+  meta: DiagnosticMeta;
+  structured_data: DiagnosticStructuredData;
+  text: DiagnosticText;
+  robots: DiagnosticRobots;
+  agent_files: DiagnosticAgentFile[];
+  created_at?: string;
+};
+
+export type DiagnosticSummary = {
+  id: string;
+  url: string;
+  score: number;
+  grade: string;
+  created_at: string;
+};
+
 export const BUSY = new Set(["queued", "running", "crawling", "generating"]);

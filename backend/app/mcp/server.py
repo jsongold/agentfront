@@ -13,6 +13,8 @@ from sqlmodel import select
 from app.analytics.log import log_mcp_call
 from app.config import get_settings
 from app.db import session_scope
+from app.diagnostics.report import DiagnosticReport
+from app.diagnostics.service import diagnose_url
 from app.domain.catalog import BusinessCatalog, ConversionPointDraft, Offering
 from app.domain.validation import SchemaValidationError
 from app.models import ConversionPoint, Delivery
@@ -347,6 +349,23 @@ def submit_conversion_tool(
         ctx,
     )
     return result
+
+
+@mcp.tool(
+    name="diagnose_agent_visibility",
+    description="Score how visible a URL is to AI agents: robots.txt, structured data, readable text, and agent files.",
+)
+def diagnose_agent_visibility_tool(
+    url: str,
+    agent_name: str = "",
+    ctx: Context = None,  # type: ignore[assignment]
+) -> DiagnosticReport:
+    try:
+        report = DiagnosticReport.model_validate(diagnose_url(url))
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    _log("diagnose_agent_visibility", {"url": url}, [], agent_name, ctx)
+    return report
 
 
 def streamable_app():

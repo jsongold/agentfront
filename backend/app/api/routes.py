@@ -14,6 +14,7 @@ from sqlmodel import Session, select
 from app.adapters.registry import adapter_map
 from app.config import get_settings, llm_key_status, uses_openai_compatible_base
 from app.db import get_session
+from app.diagnostics.service import diagnose_url
 from app.domain.catalog import BusinessCatalog
 from app.domain.completeness import compute_completeness, load_required_fields
 from app.domain.validation import SchemaValidationError
@@ -24,6 +25,7 @@ from app.models import (
     ConversionPoint,
     CrawlDocument,
     Delivery,
+    DiagnosticReport,
     GenerationRun,
     McpCallLog,
     Offering,
@@ -139,6 +141,10 @@ class AdapterBody(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
+class DiagnosticBody(BaseModel):
+    url: str
+
+
 class PointBody(BaseModel):
     business_id: str | None = None
     key: str | None = None
@@ -196,6 +202,48 @@ def adapters() -> list[dict[str, Any]]:
         {"key": adapter.key, "title": adapter.title, "config_schema": adapter.config_schema()}
         for adapter in adapter_map().values()
     ]
+
+
+@router.post("/diagnostics")
+def run_diagnostic(body: DiagnosticBody, session: Session = Depends(get_session)) -> JSONResponse:
+    try:
+        report = diagnose_url(body.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    row = DiagnosticReport(
+        url=str(report["url"]),
+        score=int(report["score"]),
+        grade=str(report["grade"]),
+        report=report,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    data = dict(report)
+    data["id"] = row.id
+    data["created_at"] = row.created_at
+    return JSONResponse(jsonable(data))
+
+
+@router.get("/diagnostics")
+def list_diagnostics(
+    session: Session = Depends(get_session),
+    _start: int = 0,
+    _end: int = 20,
+) -> JSONResponse:
+    rows = list(session.exec(select(DiagnosticReport).order_by(DiagnosticReport.created_at.desc())).all())
+    start, end = _page(_start, _end)
+    items = [
+        {
+            "id": row.id,
+            "url": row.url,
+            "score": row.score,
+            "grade": row.grade,
+            "created_at": row.created_at,
+        }
+        for row in rows[start:end]
+    ]
+    return _listed(items, len(rows))
 
 
 @router.get("/businesses")

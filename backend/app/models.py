@@ -301,3 +301,17 @@ class PageFetchLog(SQLModel, table=True):
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
     )
+
+
+class DiagnosticReport(SQLModel, table=True):
+    __tablename__ = "diagnostic_reports"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    url: str = Field(sa_column=Column(Text, nullable=False))
+    score: int = Field(default=0)
+    grade: str = Field(default="E", max_length=4)
+    report: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False))
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )

@@ -1,0 +1,94 @@
+user_agent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"
+timeout_seconds: 15
+max_bytes: 2000000
+robots_max_bytes: 200000
+agent_file_max_bytes: 200000
+
+bots:
+  - GPTBot
+  - ClaudeBot
+  - PerplexityBot
+  - Google-Extended
+  - Googlebot
+  - Bingbot
+  - Applebot
+  - OAI-SearchBot
+
+agent_files:
+  - key: llms_txt
+    path: /llms.txt
+    label: llms.txt
+    validator: text
+  - key: agents_md
+    path: /agents.md
+    label: agents.md
+    validator: text
+  - key: ucp
+    path: /.well-known/ucp
+    label: UCPプロファイル
+    validator: ucp
+
+business_types:
+  - Organization
+  - LocalBusiness
+  - ProfessionalService
+  - HomeAndConstructionBusiness
+  - GeneralContractor
+  - Product
+  - Service
+  - Offer
+
+text:
+  min_chars: 500
+  min_ratio: 0.01
+  shell_max_chars: 300
+
+grades:
+  - min: 90
+    grade: A
+  - min: 75
+    grade: B
+  - min: 60
+    grade: C
+  - min: 40
+    grade: D
+  - min: 0
+    grade: E
+
+checks:
+  - key: reachable
+    label: ページを取得できる
+    weight: 15
+    recommendation: "ページが取得できませんでした。URL、公開状態、サーバーの応答を確認してください。"
+  - key: robots_ai
+    label: AIクローラを許可している
+    weight: 15
+    recommendation: "robots.txt で拒否されているAIクローラがあります（{bots}）。検索や回答での引用を許す場合は許可に変更してください。"
+  - key: structured_data
+    label: 構造化データがある
+    weight: 10
+    recommendation: "JSON-LD（schema.org）を追加し、事業者名・住所・提供内容を機械可読にしてください。"
+  - key: business_entity
+    label: 事業・商品・サービスを示す型がある
+    weight: 15
+    recommendation: "Organization、LocalBusiness、Product、Service、Offer などの型で事業内容を宣言してください。"
+  - key: readable_text
+    label: 読み取れる本文が十分にある
+    weight: 15
+    recommendation: "本文がほとんど取得できません。JavaScriptに依存せず、主要な文章をサーバー側のHTMLに含めてください。"
+  - key: meta
+    label: タイトルと説明がある
+    weight: 10
+    recommendation: "title と meta description を設定し、ページの内容を要約してください。"
+  - key: llms_txt
+    label: llms.txt がある
+    weight: 8
+    recommendation: "サイトの案内をまとめた /llms.txt を公開してください。"
+  - key: agents_md
+    label: agents.md がある
+    weight: 7
+    recommendation: "エージェント向けの手順や問い合わせ方法を /agents.md にまとめてください。"
+  - key: ucp
+    label: UCPプロファイルがある
+    weight: 5
+    recommendation: "/.well-known/ucp に version と services を含むUCPプロファイルを公開してください。"
