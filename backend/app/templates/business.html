@@ -3,6 +3,8 @@
 {% set description = page.summary %}
 {% set markdown_url = page.md_url %}
 {% set jsonld = page.jsonld %}
+{% set agents_md_url = page.agents_md_url %}
+{% set ucp_url = page.ucp_url %}
 {% block body %}
 <p class="note">AIエージェント向けの事業者カタログです。人間向けの宣伝ページではありません。</p>
 <h1>{{ page.name }}</h1>
@@ -60,6 +62,13 @@
     <div><a href="{{ point.action_url }}">{{ point.action_url }}</a></div>
   </li>
   {% endfor %}
+</ul>
+<h2>エージェント向けリソース</h2>
+<ul>
+  <li><a href="{{ page.agents_md_url }}">agents.md</a></li>
+  <li><a href="{{ page.ucp_url }}">UCP profile</a></li>
+  <li><a href="/llms.txt">llms.txt</a></li>
+  <li><a href="/feed.json">feed.json</a></li>
 </ul>
 <p><a href="{{ page.md_url }}">Markdown版</a> · <a href="{{ page.feed_url }}">JSON</a></p>
 {% endblock %}

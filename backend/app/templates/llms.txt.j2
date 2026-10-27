@@ -3,6 +3,8 @@
 > 事業者が公開した、AIエージェントが比較・提案し、見積や予約などのコンバージョンまで進めるための目録です。意味検索用のベクトル索引はありません。絞り込みは MCP ツール search_businesses の属性で行ってください。
 
 ベースURL: {{ base }}
+エージェント向け手順: {{ base }}/agents.md
+UCPプロファイル: {{ base }}/.well-known/ucp
 フィード: {{ base }}/feed.json
 サイトマップ: {{ base }}/sitemap.xml
 
@@ -11,6 +13,8 @@
 {% for business in businesses %}
 - [{{ business.name }}]({{ business.md_url }}): {{ business.summary }}
   - HTML: {{ business.html_url }}
+  - agents.md: {{ business.agents_md_url }}
+  - UCP: {{ business.ucp_url }}
   {% if business.service_area %}- 対応エリア: {{ business.service_area | join(", ") }}
   {% endif %}
   {% if business.tags %}- タグ: {{ business.tags | join(", ") }}

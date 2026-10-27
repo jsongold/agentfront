@@ -80,10 +80,13 @@ OPENAI_API_KEY=sk-...
 ほかの公開物:
 
 - http://localhost:8765/llms.txt
+- http://localhost:8765/agents.md （全事業者の agents.md へのリンク）
+- http://localhost:8765/.well-known/ucp （プラットフォーム全体のUCPプロファイル）
 - http://localhost:8765/feed.json
 - http://localhost:8765/sitemap.xml
 - http://localhost:8765/robots.txt （GPTBot や ClaudeBot などを許可）
 - 各事業者の `.../b/{slug}.md`
+- 各事業者の `.../b/{slug}/agents.md` と `.../b/{slug}/.well-known/ucp`
 
 ## MCPクライアント
 

@@ -22,7 +22,7 @@ from app.public.routes import router as public_router
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
 
-_PUBLIC_EXACT = {"/", "/robots.txt", "/sitemap.xml", "/llms.txt", "/feed.json"}
+_PUBLIC_EXACT = {"/", "/robots.txt", "/sitemap.xml", "/llms.txt", "/agents.md", "/.well-known/ucp", "/feed.json"}
 
 mcp_http = streamable_app()
 session_manager = mcp._lowlevel_server.session_manager

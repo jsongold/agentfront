@@ -6,6 +6,8 @@
   <title>{% block title %}{{ title | default("エージェント向けカタログ") }}{% endblock %}</title>
   <meta name="description" content="{{ description | default("AIエージェントが事業者を比較・提案するためのカタログ") }}">
   {% if markdown_url %}<link rel="alternate" type="text/markdown" href="{{ markdown_url }}">{% endif %}
+  {% if agents_md_url %}<link rel="alternate" type="text/markdown" href="{{ agents_md_url }}" title="agents.md">{% endif %}
+  {% if ucp_url %}<link rel="ucp" href="{{ ucp_url }}" type="application/json">{% endif %}
   {% if jsonld %}
   <script type="application/ld+json">{{ jsonld | safe }}</script>
   {% endif %}

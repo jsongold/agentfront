@@ -59,6 +59,8 @@ class BusinessDetail(BaseModel):
     id: str
     public_url: str
     markdown_url: str
+    agents_md_url: str
+    ucp_url: str
     catalog: BusinessCatalog
 
 
@@ -201,10 +203,13 @@ def get_business(
         if row is None:
             raise ToolError("公開中の事業者が見つかりません")
         catalog = load_catalog(session, row, include_adapter_config=False)
+        base = _base()
         detail = BusinessDetail(
             id=str(row.id),
-            public_url=f"{_base()}/b/{row.slug}",
-            markdown_url=f"{_base()}/b/{row.slug}.md",
+            public_url=f"{base}/b/{row.slug}",
+            markdown_url=f"{base}/b/{row.slug}.md",
+            agents_md_url=f"{base}/b/{row.slug}/agents.md",
+            ucp_url=f"{base}/b/{row.slug}/.well-known/ucp",
             catalog=catalog,
         )
         found = str(row.id)
